@@ -136,6 +136,82 @@ return getPost(sourceId)
         .flatMap(this::createPost);
 ```
 
+### Consuming Mono Responses (Client Examples)
+
+The `client/` package demonstrates how external applications consume `Mono<Post>` responses from the REST API.
+
+#### PostClientExample.java — Comprehensive Patterns
+
+Shows all the ways to handle `Mono<Post>` responses:
+
+| Pattern | Method | Use Case |
+|---------|--------|----------|
+| Reactive return | `getPostReactive()` | Return directly from WebFlux controllers |
+| Subscribe | `getPostWithSubscribe()` | Fire-and-forget, logging, side effects |
+| Map | `getPostTitle()` | Synchronous transformations |
+| FlatMap | `getPostThenUpdate()` | Chain async operations |
+| Block | `getPostBlocking()` | Servlet/MVC apps (non-reactive) |
+| Block with timeout | `getPostBlockingWithTimeout()` | Safer blocking with deadline |
+| Error fallback | `getPostWithFallback()` | Return default on error |
+| Error resume | `getPostWithFallbackMono()` | Try alternative source on error |
+| Error mapping | `getPostWithErrorMapping()` | Convert HTTP errors to exceptions |
+| Timeout | `getPostWithTimeout()` | Add timeout to reactive call |
+| Retry | `getPostWithRetry()` | Retry with exponential backoff |
+| Cache | `getPostCached()` | Cache result for multiple subscribers |
+| Logging | `getPostWithLogging()` | Side effects without changing stream |
+
+**Example — Reactive (recommended for WebFlux):**
+
+```java
+@GetMapping("/{id}")
+public Mono<Post> getPost(@PathVariable long id) {
+    return postApiClient.getPost(id);  // Spring subscribes automatically
+}
+```
+
+**Example — Blocking (for servlet apps):**
+
+```java
+Post post = webClient.get()
+        .uri("/api/posts/1")
+        .retrieve()
+        .bodyToMono(Post.class)
+        .block();  // Blocks thread until response arrives
+```
+
+**Example — Subscribe with callbacks:**
+
+```java
+postApiClient.getPost(1)
+    .subscribe(
+        post -> log.info("Got: {}", post),
+        error -> log.error("Failed", error),
+        () -> log.info("Done")
+    );
+```
+
+#### PostApiClient.java — Spring Service Bean
+
+A ready-to-inject `@Component` for consuming the Post API from another Spring application:
+
+```java
+@Autowired
+private PostApiClient postApiClient;
+
+// In a WebFlux controller — just return the Mono
+@GetMapping("/my-posts/{id}")
+public Mono<Post> getPost(@PathVariable long id) {
+    return postApiClient.getPost(id);
+}
+
+// Transform before returning
+@GetMapping("/my-posts/{id}/title")
+public Mono<String> getPostTitle(@PathVariable long id) {
+    return postApiClient.getPost(id)
+            .map(Post::getTitle);
+}
+```
+
 ## Configuration
 
 See `src/main/resources/application.properties` for all available settings:
@@ -163,11 +239,14 @@ src/main/java/com/example/demo/
 ├── auth/
 │   ├── AuthTokenService.java       # BearerTokenProvider with StampedLock
 │   └── TokenHolder.java            # Singleton token cache (volatile fields)
+├── client/
+│   ├── PostApiClient.java          # Spring @Component API client for Post endpoints
+│   └── PostClientExample.java      # Comprehensive Mono<T> consumption patterns
 ├── config/
 │   ├── AuthTokenProperties.java    # @ConfigurationProperties for auth.token.*
 │   └── TokenProviderConfig.java    # @EnableConfigurationProperties
 ├── controller/
-│   └── PostController.java         # REST endpoints
+│   └── PostController.java         # REST endpoints returning Mono<Post>
 ├── model/
 │   └── Post.java                   # JSONPlaceholder post model
 ├── service/
