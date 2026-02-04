@@ -46,10 +46,8 @@ public class PostApiClient {
 
     private final WebClient webClient;
 
-    public PostApiClient(
-            WebClient.Builder webClientBuilder,
-            @Value("${post.api.base-url:http://localhost:8080}") String baseUrl) {
-        this.webClient = webClientBuilder
+    public PostApiClient(@Value("${post.api.base-url:http://localhost:8080}") String baseUrl) {
+        this.webClient = WebClient.builder()
                 .baseUrl(baseUrl)
                 .defaultHeader("Accept", MediaType.APPLICATION_JSON_VALUE)
                 .build();
