@@ -1,6 +1,11 @@
 # spring-web-client-example-app
 
-A Spring Boot WebFlux application that demonstrates how to use `spring-web-client` to call downstream REST APIs with per-request filter selection, per-request timeout/retry overrides, bearer token injection with `StampedLock`, and reactive composition.
+A Spring Boot application that demonstrates how to use `spring-web-client` to call downstream REST APIs using both:
+
+- **WebClient (reactive)** — Per-request filter selection, `Mono<T>` responses
+- **RestClient (synchronous)** — Per-request interceptor selection, direct `T` responses
+
+Features include per-request timeout/retry overrides, bearer token injection with `StampedLock`, and reactive composition.
 
 ## Requirements
 
@@ -28,6 +33,8 @@ The app starts on port `8080` and calls [JSONPlaceholder](https://jsonplaceholde
 
 ## Endpoints
 
+### WebClient (Reactive) — `/api/posts`
+
 | Method | URL | Description |
 |---|---|---|
 | GET | `/api/posts/{id}` | Fetch a single post (authenticated, 5s timeout) |
@@ -37,6 +44,20 @@ The app starts on port `8080` and calls [JSONPlaceholder](https://jsonplaceholde
 | PATCH | `/api/posts/{id}/title?title=New` | Partial update (authenticated) |
 | DELETE | `/api/posts/{id}` | Delete a post (authenticated) |
 | GET | `/api/posts/{id}/duplicate` | Fetch + create a copy (chained calls, authenticated) |
+
+### RestClient (Synchronous) — `/api/rest/posts`
+
+| Method | URL | Description |
+|---|---|---|
+| GET | `/api/rest/posts/{id}` | Fetch a single post (authenticated, 5s timeout) |
+| GET | `/api/rest/posts` | Fetch all posts as raw JSON (public, no bearer token) |
+| POST | `/api/rest/posts` | Create a post (authenticated, 5 retries, 500ms backoff, 10s timeout) |
+| PUT | `/api/rest/posts/{id}` | Full update of a post (authenticated) |
+| PATCH | `/api/rest/posts/{id}/title?title=New` | Partial update (authenticated) |
+| DELETE | `/api/rest/posts/{id}` | Delete a post (authenticated) |
+| GET | `/api/rest/posts/{id}/duplicate` | Fetch + create a copy (chained calls, authenticated) |
+
+Both endpoint sets call the same JSONPlaceholder API. The reactive endpoints return `Mono<T>`, while the synchronous endpoints return `T` directly.
 
 ## What This Demonstrates
 
@@ -108,11 +129,34 @@ WebServiceRequest.<Post>builder()
 
 The token is cached in `TokenHolder` (a classic Java singleton) and refreshed every 10 seconds (configurable via `auth.token.token-ttl-seconds`).
 
-The auth server call uses `java.net.http.HttpClient` (JDK built-in) rather than the library's `ServiceClient`, to avoid circular dependency — this service provides the token that the library injects into requests.
+The auth server call uses `java.net.http.HttpClient` (JDK built-in) rather than the library's `WebServiceClient`, to avoid circular dependency — this service provides the token that the library injects into requests.
 
-### Blocking Usage
+### RestClient Usage (Synchronous)
 
-`BlockingUsageExample` shows how to use the library from a Spring MVC (servlet) context by calling `.block()` on the returned `Mono`. Filters are attached per-request in the same way:
+`RestPostService` shows how to use `RestWebServiceClient` for synchronous blocking calls. Interceptors are the RestClient equivalent of WebClient filters:
+
+```java
+@Autowired private RestWebServiceClient restWebServiceClient;
+@Autowired private CorrelationIdInterceptor correlationIdInterceptor;
+@Autowired private BearerTokenInterceptor bearerTokenInterceptor;
+
+public Post getPost(long id) {
+    RestServiceRequest<Post> request = RestServiceRequest.<Post>builder()
+            .url(BASE_URL + "/posts/" + id)
+            .responseType(Post.class)
+            .interceptor(correlationIdInterceptor)
+            .interceptor(bearerTokenInterceptor)
+            .timeoutMs(5000)
+            .build();
+    return restWebServiceClient.execute(request);  // Returns Post directly, not Mono<Post>
+}
+```
+
+The RestClient and WebClient share the same underlying HTTP client, so they use the same connection pool and SSL configuration.
+
+### Blocking Usage (WebClient with .block())
+
+`BlockingUsageExample` shows how to use the WebClient library from a Spring MVC (servlet) context by calling `.block()` on the returned `Mono`. Filters are attached per-request in the same way:
 
 ```java
 public Post getPostBlocking(long id) {
@@ -125,6 +169,8 @@ public Post getPostBlocking(long id) {
     return serviceClient.execute(request).block();
 }
 ```
+
+**Note:** For new synchronous code, prefer `RestWebServiceClient` over calling `.block()` on WebClient — it provides a cleaner API and better stack traces.
 
 ### Reactive Composition
 
@@ -246,11 +292,13 @@ src/main/java/com/example/demo/
 │   ├── AuthTokenProperties.java    # @ConfigurationProperties for auth.token.*
 │   └── TokenProviderConfig.java    # @EnableConfigurationProperties
 ├── controller/
-│   └── PostController.java         # REST endpoints returning Mono<Post>
+│   ├── PostController.java         # Reactive REST endpoints returning Mono<Post>
+│   └── RestPostController.java     # Synchronous REST endpoints returning Post
 ├── model/
 │   └── Post.java                   # JSONPlaceholder post model
 ├── service/
 │   ├── PostService.java            # Reactive service with per-request filters
+│   ├── RestPostService.java        # Synchronous service with per-request interceptors
 │   └── BlockingUsageExample.java   # Blocking (.block()) usage with filters
 └── DemoApplication.java            # Spring Boot entry point
 

@@ -2,7 +2,7 @@ package com.example.demo.service;
 
 import com.example.demo.model.Post;
 import com.webclient.lib.auth.BearerTokenFilterFunction;
-import com.webclient.lib.client.ServiceClient;
+import com.webclient.lib.client.WebServiceClient;
 import com.webclient.lib.filter.CorrelationIdFilterFunction;
 import com.webclient.lib.filter.RequestLoggingFilterFunction;
 import com.webclient.lib.model.WebServiceRequest;
@@ -13,7 +13,7 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
 /**
- * Demonstrates using the library's {@link ServiceClient} to call
+ * Demonstrates using the library's {@link WebServiceClient} to call
  * JSONPlaceholder (https://jsonplaceholder.typicode.com) — a free fake REST API.
  * <p>
  * Each method shows a different HTTP verb, configuration style, and
@@ -26,14 +26,14 @@ public class PostService {
 
     private static final String BASE_URL = "https://jsonplaceholder.typicode.com";
 
-    private ServiceClient serviceClient;
+    private WebServiceClient webServiceClient;
     private BearerTokenFilterFunction bearerTokenFilter;
     private CorrelationIdFilterFunction correlationIdFilter;
     private RequestLoggingFilterFunction requestLoggingFilter;
 
     @Autowired
-    public void setServiceClient(ServiceClient serviceClient) {
-        this.serviceClient = serviceClient;
+    public void setWebServiceClient(WebServiceClient webServiceClient) {
+        this.webServiceClient = webServiceClient;
     }
 
     @Autowired
@@ -68,7 +68,7 @@ public class PostService {
                 .timeoutMs(5000)
                 .build();
 
-        return serviceClient.execute(spec);
+        return webServiceClient.execute(spec);
     }
 
     /**
@@ -86,7 +86,7 @@ public class PostService {
                 .filter(requestLoggingFilter)
                 .build();
 
-        return serviceClient.execute(spec);
+        return webServiceClient.execute(spec);
     }
 
     /**
@@ -111,7 +111,7 @@ public class PostService {
                 .timeoutMs(10000)
                 .build();
 
-        return serviceClient.execute(spec);
+        return webServiceClient.execute(spec);
     }
 
     /**
@@ -130,7 +130,7 @@ public class PostService {
                 .filter(bearerTokenFilter)
                 .build();
 
-        return serviceClient.execute(spec);
+        return webServiceClient.execute(spec);
     }
 
     /**
@@ -149,7 +149,7 @@ public class PostService {
                 .filter(bearerTokenFilter)
                 .build();
 
-        return serviceClient.execute(spec);
+        return webServiceClient.execute(spec);
     }
 
     /**
@@ -165,7 +165,7 @@ public class PostService {
                 .filter(bearerTokenFilter)
                 .build();
 
-        return serviceClient.execute(spec);
+        return webServiceClient.execute(spec);
     }
 
     /**
@@ -185,7 +185,7 @@ public class PostService {
                 .filter(requestLoggingFilter)
                 .build();
 
-        return serviceClient.execute(spec);
+        return webServiceClient.execute(spec);
     }
 
     /**

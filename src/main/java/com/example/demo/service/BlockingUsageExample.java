@@ -2,7 +2,7 @@ package com.example.demo.service;
 
 import com.example.demo.model.Post;
 import com.webclient.lib.auth.BearerTokenFilterFunction;
-import com.webclient.lib.client.ServiceClient;
+import com.webclient.lib.client.WebServiceClient;
 import com.webclient.lib.filter.CorrelationIdFilterFunction;
 import com.webclient.lib.model.WebServiceRequest;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,13 +25,13 @@ public class BlockingUsageExample {
 
     private static final String BASE_URL = "https://jsonplaceholder.typicode.com";
 
-    private ServiceClient serviceClient;
+    private WebServiceClient webServiceClient;
     private BearerTokenFilterFunction bearerTokenFilter;
     private CorrelationIdFilterFunction correlationIdFilter;
 
     @Autowired
-    public void setServiceClient(ServiceClient serviceClient) {
-        this.serviceClient = serviceClient;
+    public void setWebServiceClient(WebServiceClient webServiceClient) {
+        this.webServiceClient = webServiceClient;
     }
 
     @Autowired
@@ -58,7 +58,7 @@ public class BlockingUsageExample {
                 .filter(bearerTokenFilter)
                 .build();
 
-        return serviceClient.execute(spec).block();
+        return webServiceClient.execute(spec).block();
     }
 
     /**
@@ -82,6 +82,6 @@ public class BlockingUsageExample {
                 .filter(bearerTokenFilter)
                 .build();
 
-        return serviceClient.execute(spec).block();
+        return webServiceClient.execute(spec).block();
     }
 }
